@@ -50,7 +50,12 @@ with col2:
             'Content-Type': 'application/json'
         }
         response = requests.get(url, headers=headers)
-        return response.json()
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"Error en la solicitud a Serply: {response.status_code}")
+            return None
 
     def generar_resumen(titulo, snippet):
         url = "https://api.together.xyz/inference"
@@ -93,39 +98,43 @@ with col2:
         if tema_investigacion:
             with st.spinner("Buscando artículos y generando resúmenes..."):
                 resultados_busqueda = buscar_articulos(tema_investigacion)
-                resultados = []
+                
+                if resultados_busqueda and "results" in resultados_busqueda:
+                    resultados = []
 
-                for item in resultados_busqueda.get("results", []):
-                    titulo = item.get("title", "")
-                    snippet = item.get("snippet", "")
-                    link = item.get("link", "")
+                    for item in resultados_busqueda["results"]:
+                        titulo = item.get("title", "")
+                        snippet = item.get("snippet", "")
+                        link = item.get("link", "")
 
-                    resumen_y_puntos = generar_resumen(titulo, snippet)
+                        resumen_y_puntos = generar_resumen(titulo, snippet)
 
-                    resultado = {
-                        "title": titulo,
-                        "link": link,
-                        "resumen": resumen_y_puntos
-                    }
-                    resultados.append(resultado)
+                        resultado = {
+                            "title": titulo,
+                            "link": link,
+                            "resumen": resumen_y_puntos
+                        }
+                        resultados.append(resultado)
 
-                # Mostrar los resultados
-                st.subheader(f"Resultados para el tema: {tema_investigacion}")
-                for resultado in resultados:
-                    st.markdown(f"### [{resultado['title']}]({resultado['link']})")
-                    st.markdown(resultado['resumen'])
-                    st.markdown("---")
+                    # Mostrar los resultados
+                    st.subheader(f"Resultados para el tema: {tema_investigacion}")
+                    for resultado in resultados:
+                        st.markdown(f"### [{resultado['title']}]({resultado['link']})")
+                        st.markdown(resultado['resumen'])
+                        st.markdown("---")
 
-                # Botón para descargar el documento
-                doc = create_docx(tema_investigacion, resultados)
-                buffer = BytesIO()
-                doc.save(buffer)
-                buffer.seek(0)
-                st.download_button(
-                    label="Descargar resumen en DOCX",
-                    data=buffer,
-                    file_name=f"Investigacion_{tema_investigacion.replace(' ', '_')}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
+                    # Botón para descargar el documento
+                    doc = create_docx(tema_investigacion, resultados)
+                    buffer = BytesIO()
+                    doc.save(buffer)
+                    buffer.seek(0)
+                    st.download_button(
+                        label="Descargar resumen en DOCX",
+                        data=buffer,
+                        file_name=f"Investigacion_{tema_investigacion.replace(' ', '_')}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+                else:
+                    st.warning("No se encontraron resultados para el tema ingresado.")
         else:
             st.warning("Por favor, ingresa un tema de investigación.")
