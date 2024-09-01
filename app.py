@@ -41,32 +41,26 @@ with col1:
 
 with col2:
     TOGETHER_API_KEY = st.secrets["TOGETHER_API_KEY"]
-    SERPLY_API_KEY = st.secrets["SERPLY_API_KEY"]
+    SERPER_API_KEY = st.secrets["SERPER_API_KEY"]
 
     def buscar_articulos(query):
-        url = f"https://api.serply.io/v1/scholar/q={query.replace(' ', '+')}"
+        url = "https://google.serper.dev/search"
+        payload = json.dumps({
+            "q": f"{query} site:scholar.google.com",
+            "num": 5
+        })
         headers = {
-            'X-Api-Key': SERPLY_API_KEY,
+            'X-API-KEY': SERPER_API_KEY,
             'Content-Type': 'application/json'
         }
-        response = requests.get(url, headers=headers)
-        
-        # Depuración: Mostrar el código de estado
-        st.write(f"Código de estado de la respuesta: {response.status_code}")
-        
-        if response.status_code == 200:
-            # Depuración: Mostrar la respuesta completa
-            st.write("Respuesta de la API:", response.json())
-            return response.json()
-        else:
-            st.error(f"Error en la solicitud a Serply: {response.status_code}")
-            return None
+        response = requests.post(url, headers=headers, data=payload)
+        return response.json()
 
     def generar_resumen(titulo, snippet):
         url = "https://api.together.xyz/inference"
         payload = json.dumps({
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "prompt": f"Título del artículo: {titulo}\n\nFragmento del artículo: {snippet}\n\nGenera un resumen conciso del artículo basado en la información proporcionada. Luego, extrae y enumera 3 puntos clave del artículo.\n\nResumen:\n\nPuntos clave:\n1.",
+            "prompt": f"Título del artículo: {titulo}\n\nFragment del artículo: {snippet}\n\nGenera un resumen conciso del artículo basado en la información proporcionada. Luego, extrae y enumera 3 puntos clave del artículo.\n\nResumen:\n\nPuntos clave:\n1.",
             "max_tokens": 2048,
             "temperature": 0.2,
             "top_p": 0.9,
@@ -103,43 +97,39 @@ with col2:
         if tema_investigacion:
             with st.spinner("Buscando artículos y generando resúmenes..."):
                 resultados_busqueda = buscar_articulos(tema_investigacion)
-                
-                if resultados_busqueda and "results" in resultados_busqueda:
-                    resultados = []
+                resultados = []
 
-                    for item in resultados_busqueda["results"]:
-                        titulo = item.get("title", "")
-                        snippet = item.get("snippet", "")
-                        link = item.get("link", "")
+                for item in resultados_busqueda.get("organic", []):
+                    titulo = item.get("title", "")
+                    snippet = item.get("snippet", "")
+                    link = item.get("link", "")
 
-                        resumen_y_puntos = generar_resumen(titulo, snippet)
+                    resumen_y_puntos = generar_resumen(titulo, snippet)
 
-                        resultado = {
-                            "title": titulo,
-                            "link": link,
-                            "resumen": resumen_y_puntos
-                        }
-                        resultados.append(resultado)
+                    resultado = {
+                        "title": titulo,
+                        "link": link,
+                        "resumen": resumen_y_puntos
+                    }
+                    resultados.append(resultado)
 
-                    # Mostrar los resultados
-                    st.subheader(f"Resultados para el tema: {tema_investigacion}")
-                    for resultado in resultados:
-                        st.markdown(f"### [{resultado['title']}]({resultado['link']})")
-                        st.markdown(resultado['resumen'])
-                        st.markdown("---")
+                # Mostrar los resultados
+                st.subheader(f"Resultados para el tema: {tema_investigacion}")
+                for resultado in resultados:
+                    st.markdown(f"### [{resultado['title']}]({resultado['link']})")
+                    st.markdown(resultado['resumen'])
+                    st.markdown("---")
 
-                    # Botón para descargar el documento
-                    doc = create_docx(tema_investigacion, resultados)
-                    buffer = BytesIO()
-                    doc.save(buffer)
-                    buffer.seek(0)
-                    st.download_button(
-                        label="Descargar resumen en DOCX",
-                        data=buffer,
-                        file_name=f"Investigacion_{tema_investigacion.replace(' ', '_')}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
-                else:
-                    st.warning("No se encontraron resultados para el tema ingresado.")
+                # Botón para descargar el documento
+                doc = create_docx(tema_investigacion, resultados)
+                buffer = BytesIO()
+                doc.save(buffer)
+                buffer.seek(0)
+                st.download_button(
+                    label="Descargar resumen en DOCX",
+                    data=buffer,
+                    file_name=f"Investigacion_{tema_investigacion.replace(' ', '_')}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
         else:
             st.warning("Por favor, ingresa un tema de investigación.")
