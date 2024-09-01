@@ -47,7 +47,7 @@ with col2:
         url = "https://google.serper.dev/search"
         payload = json.dumps({
             "q": f"{query} site:scholar.google.com",
-            "num": 5
+            "num": 10
         })
         headers = {
             'X-API-KEY': SERPER_API_KEY,
