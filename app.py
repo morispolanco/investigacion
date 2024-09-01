@@ -41,26 +41,22 @@ with col1:
 
 with col2:
     TOGETHER_API_KEY = st.secrets["TOGETHER_API_KEY"]
-    SERPER_API_KEY = st.secrets["SERPER_API_KEY"]
+    SERPLY_API_KEY = st.secrets["SERPLY_API_KEY"]
 
     def buscar_articulos(query):
-        url = "https://google.serper.dev/search"
-        payload = json.dumps({
-            "q": f"{query} site:scholar.google.com",
-            "num": 5
-        })
+        url = f"https://api.serply.io/v1/scholar/q={query.replace(' ', '+')}"
         headers = {
-            'X-API-KEY': SERPER_API_KEY,
+            'X-Api-Key': SERPLY_API_KEY,
             'Content-Type': 'application/json'
         }
-        response = requests.post(url, headers=headers, data=payload)
+        response = requests.get(url, headers=headers)
         return response.json()
 
     def generar_resumen(titulo, snippet):
         url = "https://api.together.xyz/inference"
         payload = json.dumps({
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "prompt": f"Título del artículo: {titulo}\n\nFragment del artículo: {snippet}\n\nGenera un resumen conciso del artículo basado en la información proporcionada. Luego, extrae y enumera 3 puntos clave del artículo.\n\nResumen:\n\nPuntos clave:\n1.",
+            "prompt": f"Título del artículo: {titulo}\n\nFragmento del artículo: {snippet}\n\nGenera un resumen conciso del artículo basado en la información proporcionada. Luego, extrae y enumera 3 puntos clave del artículo.\n\nResumen:\n\nPuntos clave:\n1.",
             "max_tokens": 2048,
             "temperature": 0.2,
             "top_p": 0.9,
@@ -99,7 +95,7 @@ with col2:
                 resultados_busqueda = buscar_articulos(tema_investigacion)
                 resultados = []
 
-                for item in resultados_busqueda.get("organic", []):
+                for item in resultados_busqueda.get("results", []):
                     titulo = item.get("title", "")
                     snippet = item.get("snippet", "")
                     link = item.get("link", "")
