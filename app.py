@@ -51,7 +51,12 @@ with col2:
         }
         response = requests.get(url, headers=headers)
         
+        # Depuración: Mostrar el código de estado
+        st.write(f"Código de estado de la respuesta: {response.status_code}")
+        
         if response.status_code == 200:
+            # Depuración: Mostrar la respuesta completa
+            st.write("Respuesta de la API:", response.json())
             return response.json()
         else:
             st.error(f"Error en la solicitud a Serply: {response.status_code}")
